@@ -30,7 +30,7 @@ int current_game = 1;
 int game_choice;
 
 void set_game(int game) {
-  if (game == MENU_GAME) game_choice = current_game;
+  if (game == MENU_GAME && current_game != MENU_GAME) game_choice = current_game;
   current_game = game;
   (*games[current_game].init_fun)();
 }
