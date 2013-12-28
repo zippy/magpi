@@ -13,7 +13,8 @@ typedef struct {
   void (*loop_fun)();
   void (*init_fun)();
   void (*menu_fun)();
-} Game;
+} 
+Game;
 
 #define MENU_GAME     0
 #define CATCHER_GAME  1
@@ -126,20 +127,24 @@ void options() {
   }
   if (pad_check()) {
     switch(pad_hit) {
-      case PAD_R:
-        current_option++;break;
-      case PAD_L:
-        current_option--;break;
-      case PAD_U:
-      case PAD_D:
-        if (pad_hit == PAD_D && opts[current_option] > opts_min[current_option]) opts[current_option]--;
-        if (pad_hit == PAD_U && opts[current_option] < opts_max[current_option]) opts[current_option]++;
-        switch(current_option) {
-          case CONTRAST:            
-            display.setContrast(opts[CONTRAST]);break;
-          case BRIGHTNESS:
-            analogWrite(BACKLIGHT_PIN, opts[BRIGHTNESS]);break;
-        }
+    case PAD_R:
+      current_option++;
+      break;
+    case PAD_L:
+      current_option--;
+      break;
+    case PAD_U:
+    case PAD_D:
+      if (pad_hit == PAD_D && opts[current_option] > opts_min[current_option]) opts[current_option]--;
+      if (pad_hit == PAD_U && opts[current_option] < opts_max[current_option]) opts[current_option]++;
+      switch(current_option) {
+      case CONTRAST:            
+        display.setContrast(opts[CONTRAST]);
+        break;
+      case BRIGHTNESS:
+        analogWrite(BACKLIGHT_PIN, opts[BRIGHTNESS]);
+        break;
+      }
     }
     if (current_option < 0) current_option = NUM_OPTIONS -1;
     else if (current_option >= NUM_OPTIONS) current_option = 0;
@@ -160,7 +165,7 @@ const unsigned char PROGMEM catcher_bm[] =
 {
   B11000011,
   B11000011,
-  B11111111,
+  B01111110,
 };
 
 const unsigned char PROGMEM ball_bm[] =
@@ -182,7 +187,9 @@ const unsigned char PROGMEM ball_bm[] =
 #define MAX_AX 1.5
 #define MAX_AY 1
 
-typedef struct {
+typedef struct sprite sprite;
+
+struct sprite {
   float x;
   float y;
   float ax;
@@ -190,7 +197,8 @@ typedef struct {
   int h;
   int w;
   const unsigned char  *bitmap;
-} sprite;
+  void (*draw_fun)(void *);
+};
 
 const int ms_per_frame = 1000/FRAMES_PER_SECOND;
 
@@ -200,11 +208,12 @@ sprite sprites[MAX_SPRITES];
 int sprite_count = 1;
 float gravity;
 float air_resistance;
+float wind;
 
 long ft,bt;
 int score;
 
-uint8_t level,level_balls;
+uint8_t level,level_balls,frame;
 boolean level_up;
 int next_ball_max;
 
@@ -216,6 +225,7 @@ void reset_ball(int i) {
   sprites[i].w = cW;
   sprites[i].h = cH;
   sprites[i].bitmap = ball_bm;
+  sprites[i].draw_fun = 0;
 }
 
 void add_ball() {
@@ -240,6 +250,42 @@ void reset_catcher() {
   sprites[CATCHER].ay = 0;
 }
 
+/* pants */ void draw_catcher(void *s) {
+  int i = frame &1;
+  switch (pad_hit) {
+    case PAD_D:
+      switch(i) {
+        case 0:
+          display.drawPixel(((sprite *)s)->x+2,((sprite *)s)->y+3,1);
+          display.drawPixel(((sprite *)s)->x+5,((sprite *)s)->y+3,1);
+          display.drawPixel(((sprite *)s)->x+3,((sprite *)s)->y+4,1);
+          display.drawPixel(((sprite *)s)->x+4,((sprite *)s)->y+3,1);
+          display.drawPixel(((sprite *)s)->x+3,((sprite *)s)->y+5,1);
+          display.drawPixel(((sprite *)s)->x+4,((sprite *)s)->y+4,1);
+          break;
+        case 1:
+          display.drawPixel(((sprite *)s)->x+2,((sprite *)s)->y+4,1);
+          display.drawPixel(((sprite *)s)->x+5,((sprite *)s)->y+4,1);
+          display.drawPixel(((sprite *)s)->x+3,((sprite *)s)->y+3,1);
+          display.drawPixel(((sprite *)s)->x+4,((sprite *)s)->y+4,1);
+          display.drawPixel(((sprite *)s)->x+3,((sprite *)s)->y+4,1);
+          display.drawPixel(((sprite *)s)->x+4,((sprite *)s)->y+5,1);
+          break;
+      }
+      break;
+    case PAD_L:
+      display.drawPixel(((sprite *)s)->x-1-i,((sprite *)s)->y+0,1);
+      display.drawPixel(((sprite *)s)->x-2-i,((sprite *)s)->y+1,1);
+      display.drawPixel(((sprite *)s)->x-1-i,((sprite *)s)->y+2,1);
+      break;
+    case PAD_R:
+      display.drawPixel(((sprite *)s)->x+8+i,((sprite *)s)->y+0,1);
+      display.drawPixel(((sprite *)s)->x+9+i,((sprite *)s)->y+1,1);
+      display.drawPixel(((sprite *)s)->x+8+i,((sprite *)s)->y+2,1);
+      break;
+  }
+}
+
 void catcher_init() {
   score = 0;
   sprite_count = 1;
@@ -247,15 +293,17 @@ void catcher_init() {
   sprites[CATCHER].w = cW;
   sprites[CATCHER].h = cH;
   sprites[CATCHER].bitmap = catcher_bm;
+  sprites[CATCHER].draw_fun = &draw_catcher;
 
   add_ball();
 
   gravity = .005;
   air_resistance = .005;
+  wind = 1;
   ft = millis()+ ms_per_frame;
   level = 0;
   level_up = true;
-  level_balls = 0;
+  frame = level_balls = 0;
   next_ball_max = 10000;
   randomSeed(ft);
 }
@@ -271,7 +319,11 @@ void move() {
     if (x < 0) sprites[i].x = (W-w)-.1;
     if (x >= W-w) sprites[i].x = 0;
     if (y < 0) sprites[i].y = (H-h)-.1;
-    if (y >= H-h) {sprites[i].ay /= 2.5; sprites[i].ay *= -1;sprites[i].y += sprites[i].ay;}
+    if (y >= H-h) {
+      sprites[i].ay /= 2.5; 
+      sprites[i].ay *= -1;
+      sprites[i].y += sprites[i].ay;
+    }
     if (i > 0) {
       float x0 = sprites[0].x;
       float y0 = sprites[0].y;
@@ -281,24 +333,24 @@ void move() {
         kill_ball(i);
       }
       if ((x > x0-5 && x < x0-3 && y>=y0-2 && y < y0+1) ||
-          (x > x0+3 && x < x0+5 && y>=y0-2 && y < y0+1)) {
+        (x > x0+3 && x < x0+5 && y>=y0-2 && y < y0+1)) {
         float by = sprites[i].ay;
         float cy = sprites[0].ay;
-        sprites[i].ay += 1.5*(cy-by);
-        sprites[0].ay += 1.5*(by-cy);
+        sprites[i].ay += (cy-by);
+        sprites[0].ay += (by-cy);
         sprites[i].y += sprites[i].ay;
         sprites[0].y += sprites[0].ay;
         float bx = sprites[i].ax;
         float cx = sprites[0].ax;
-        sprites[i].ax += 1.5*(cx-bx);
-        sprites[0].ax += 1.5*(bx-cx);
+        sprites[i].ax += (cx-bx);
+        sprites[0].ax += (bx-cx);
         sprites[i].x += sprites[i].ax;
         sprites[0].x += sprites[0].ax;
       }
       // ball hits the bottom
-      if (y>=H-cH-2 && abs(sprites[i].ay) < .1d) {
-         kill_ball(i);
-         score--;
+      if (y>=H-cH-2 && abs(sprites[i].ay) < .1) {
+        kill_ball(i);
+        score--;
       }
     }
   }
@@ -326,44 +378,50 @@ void catcher() {
   dt = millis();
   if (dt > ft) {
     ft+= ms_per_frame;
+    frame = (frame == FRAMES_PER_SECOND-1) ? 0 : frame+1;
     display.clearDisplay();
     display.setCursor(0,0);
     display.print(score);
-//    display.print("ax:");display.print(sprites[0].ax);display.print(" ay:");display.print(sprites[0].ay);
-//    display.print("x:");display.print(sprites[0].x);display.print(" y:");display.print(sprites[0].y);
-   for(int i=0;i< sprite_count;i++) {
+    //display.print(" ");   display.print(frame);
+    //    display.print("ax:");display.print(sprites[0].ax);display.print(" ay:");display.print(sprites[0].ay);
+    //    display.print("x:");display.print(sprites[0].x);display.print(" y:");display.print(sprites[0].y);
+    for(int i=0;i< sprite_count;i++) {
       display.drawBitmap((int)sprites[i].x, (int)sprites[i].y,  sprites[i].bitmap, sprites[i].w, sprites[i].h, 1);
       sprites[i].ay += gravity;
+      if ((wind - sprites[i].ax) > 0) sprites[i].ax += .01;
       if (sprites[i].ax > 0) sprites[i].ax -= air_resistance;
       if (sprites[i].ax < 0) sprites[i].ax += air_resistance;
-   }
-   display.drawLine(0,47,79,47,1);
-   display.display();
-   move();
+      if (sprites[i].draw_fun) (*sprites[i].draw_fun)(&sprites[i]);
+    }
+    display.drawLine(0,47,79,47,1);
+    display.display();
+    move();
   }
 
-   if (dt > bt && level_balls > 0) {
-     level_balls--;
-      bt = millis()+random(0,next_ball_max);
-     add_ball();
-   }
-  
+  // add balls in randomly according to lvel
+  if (dt > bt && level_balls > 0) {
+    level_balls--;
+    bt = millis()+random(0,next_ball_max);
+    add_ball();
+  }
+
   if (pad_check()) {
     switch(pad_hit) {
-      case PAD_R+PAD_L:
-        catcher_init(); break;
-      case PAD_R:
-        if (sprites[CATCHER].ax < MAX_AX) sprites[CATCHER].ax+= R;
-        break;
-      case PAD_L:
-        if (sprites[CATCHER].ax > -MAX_AX) sprites[CATCHER].ax-= R;
-        break;
-      case PAD_D:
-        if (sprites[CATCHER].ay < MAX_AY) sprites[CATCHER].ay+= R;
-        break;
-      case PAD_U:
-        if (sprites[CATCHER].ay > -MAX_AY) sprites[CATCHER].ay-= R;
-        break;
+    case PAD_R+PAD_L:
+      catcher_init(); 
+      break;
+    case PAD_L:
+      if (sprites[CATCHER].ax < MAX_AX) sprites[CATCHER].ax+= R;
+      break;
+    case PAD_R:
+      if (sprites[CATCHER].ax > -MAX_AX) sprites[CATCHER].ax-= R;
+      break;
+    case PAD_U:
+      if (sprites[CATCHER].ay < MAX_AY) sprites[CATCHER].ay+= R;
+      break;
+    case PAD_D:
+      if (sprites[CATCHER].ay > -MAX_AY) sprites[CATCHER].ay-= R;
+      break;
     }
   }
 }
