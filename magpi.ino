@@ -67,6 +67,7 @@ bool pad_check() {
 
 //---------------------------------------------------------------------
 // MENU
+#define TITLE_Y 15
 
 void name() {
   display.clearDisplay();
@@ -77,6 +78,12 @@ void name() {
   else {
     (*games[game_choice].menu_fun)();
   }
+  display.setCursor(0,30);
+  display.print("Nav: ");  display.write(27);  display.write(26);
+
+  display.setCursor(0,40);
+  display.print("Select: ");display.write(25);
+
   display.display();
 }
 
@@ -152,7 +159,7 @@ void options() {
   }
 }
 void options_menu() {
-  display.setCursor(20,20);
+  display.setCursor(20,TITLE_Y);
   display.print("Options");
 }
 void options_init() {
@@ -299,7 +306,7 @@ void catcher_init() {
 
   gravity = .005;
   air_resistance = .005;
-  wind = 1;
+  wind = 2;
   ft = millis()+ ms_per_frame;
   level = 0;
   level_up = true;
@@ -310,6 +317,14 @@ void catcher_init() {
 
 void move() {
   for(int i=0;i< sprite_count;i++) {
+
+    // environmental factors: gravity wind and air resistance
+    sprites[i].ay += gravity;
+    if ((wind - sprites[i].ax) > 0) sprites[i].ax += .02;
+    if (sprites[i].ax > 0) sprites[i].ax -= air_resistance;
+    if (sprites[i].ax < 0) sprites[i].ax += air_resistance;
+
+    // sprite inertia wrapping and bouncing
     sprites[i].x += sprites[i].ax;
     sprites[i].y += sprites[i].ay;
     int w = sprites[i].w;
@@ -324,10 +339,13 @@ void move() {
       sprites[i].ay *= -1;
       sprites[i].y += sprites[i].ay;
     }
+    
+    // ball collisions
     if (i > 0) {
       float x0 = sprites[0].x;
       float y0 = sprites[0].y;
 
+      // with the catcher
       if ((x >= x0-3 && x <= x0+3 && y>=y0-1 && y < y0+3)) {
         score++;
         kill_ball(i);
@@ -347,7 +365,7 @@ void move() {
         sprites[i].x += sprites[i].ax;
         sprites[0].x += sprites[0].ax;
       }
-      // ball hits the bottom
+      // with the ground
       if (y>=H-cH-2 && abs(sprites[i].ay) < .1) {
         kill_ball(i);
         score--;
@@ -387,10 +405,6 @@ void catcher() {
     //    display.print("x:");display.print(sprites[0].x);display.print(" y:");display.print(sprites[0].y);
     for(int i=0;i< sprite_count;i++) {
       display.drawBitmap((int)sprites[i].x, (int)sprites[i].y,  sprites[i].bitmap, sprites[i].w, sprites[i].h, 1);
-      sprites[i].ay += gravity;
-      if ((wind - sprites[i].ax) > 0) sprites[i].ax += .01;
-      if (sprites[i].ax > 0) sprites[i].ax -= air_resistance;
-      if (sprites[i].ax < 0) sprites[i].ax += air_resistance;
       if (sprites[i].draw_fun) (*sprites[i].draw_fun)(&sprites[i]);
     }
     display.drawLine(0,47,79,47,1);
@@ -427,7 +441,7 @@ void catcher() {
 }
 
 void catcher_menu() {
-  display.setCursor(20,20);
+  display.setCursor(20,TITLE_Y);
 
   display.print("Catcher!");
 }
