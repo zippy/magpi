@@ -13,16 +13,17 @@ typedef struct {
   void (*loop_fun)();
   void (*init_fun)();
   void (*menu_fun)();
-} 
-Game;
+} Game;
 
 #define MENU_GAME     0
-#define CATCHER_GAME  1
-#define OPTIONS_GAME  2
+#define CATCHER_GAME  2
+#define DRAW_GAME  1
+#define OPTIONS_GAME  3
 
-const int game_count = 3;
+const int game_count = 4;
 Game games[game_count] = {
   {menu,menu_init,0},
+  {drawer,drawer_init,drawer_menu},
   {catcher,catcher_init,catcher_menu},
   {options,options_init,options_menu},
 };
@@ -43,8 +44,9 @@ void set_game(int game) {
 #define PAD_D 0x02
 #define PAD_L 0x04
 #define PAD_R 0x08
-#define PAD_X 0x10
-#define PAD_ALL 0x0F
+#define PAD_A 0x10
+#define PAD_B 0x20
+#define PAD_M 0x40
 
 int pad_hit;
 
@@ -55,9 +57,12 @@ bool pad_check() {
     else if (ch=='d') pad_hit = PAD_R;
     else if (ch=='s') pad_hit = PAD_D;
     else if (ch=='w') pad_hit = PAD_U;
-    else if (ch=='r') pad_hit = PAD_R+PAD_L;
-    else if (ch=='m') pad_hit = PAD_ALL;
-    if (pad_hit == PAD_ALL) {
+    else if (ch=='h') pad_hit = PAD_A;
+    else if (ch=='b') pad_hit = PAD_B;
+    else if (ch=='m') pad_hit = PAD_M;
+    else if (ch=='r') pad_hit = PAD_A+PAD_B;
+    else if (ch=='p') pad_hit = PAD_L+PAD_R;
+    if (pad_hit & PAD_M) {
       set_game(MENU_GAME);
     }
     return true;
@@ -82,14 +87,14 @@ void name() {
   display.print("Nav: ");  display.write(27);  display.write(26);
 
   display.setCursor(0,40);
-  display.print("Select: ");display.write(25);
+  display.print("Select: ");display.print("A");
 
   display.display();
 }
 
 void menu() {
   if (pad_check()) {
-    if (pad_hit == PAD_L || pad_hit == PAD_R) {
+    if (pad_hit & (PAD_L+PAD_R)) {
       game_choice+= (pad_hit == PAD_L) ? -1 : 1;
       if (game_choice >= game_count) {
         game_choice = 1;
@@ -117,7 +122,7 @@ void menu_init() {
 #define BRIGHTNESS 1
 #define BACKLIGHT_PIN 9
 char *opts_name[NUM_OPTIONS] = {"Contrast","Brightness"};
-int opts[NUM_OPTIONS] = {58,255};
+int opts[NUM_OPTIONS] = {55,255};
 int opts_max[NUM_OPTIONS] = {75,255};
 int opts_min[NUM_OPTIONS] = {45,0};
 uint8_t current_option;
@@ -129,7 +134,7 @@ void options() {
     display.setCursor(0,20);
     display.print(opts_name[current_option]);
     display.print(":");
-    display.print(opts[current_option]);
+    display.print(opts[current_option]-opts_min[current_option]);
     display.display();
   }
   if (pad_check()) {
@@ -182,6 +187,77 @@ const unsigned char PROGMEM ball_bm[] =
   B00011000,
 };
 
+const unsigned char PROGMEM flag0_bm[] =
+{
+  B10000000,
+  B11100000,
+  B11010000,
+  B11010000,
+  B11111000,
+  B10000000,
+  B10000000,
+  B10000000,
+};
+const unsigned char PROGMEM flag1_bm[] =
+{
+  B10111110,
+  B11000010,
+  B10000010,
+  B10111110,
+  B11000000,
+  B10000000,
+  B10000000,
+  B10000000,
+};
+const unsigned char PROGMEM flag2_bm[] =
+{
+  B10011110,
+  B11100010,
+  B10000010,
+  B10011110,
+  B11100000,
+  B10000000,
+  B10000000,
+  B10000000,
+};
+const unsigned char PROGMEM flag3_bm[] =
+{
+  B10001110,
+  B11110010,
+  B10000010,
+  B10001110,
+  B11110000,
+  B10000000,
+  B10000000,
+  B10000000,
+};
+const unsigned char PROGMEM flag4_bm[] =
+{
+  B10000110,
+  B11111010,
+  B10000010,
+  B10000110,
+  B11111000,
+  B10000000,
+  B10000000,
+  B10000000,
+};
+const unsigned char PROGMEM flag5_bm[] =
+{
+  B10000000,
+  B11111110,
+  B10000010,
+  B10000010,
+  B11111110,
+  B10000000,
+  B10000000,
+  B10000000,
+};
+
+const unsigned char *flags_bm[] = {flag1_bm,flag2_bm,flag3_bm,flag4_bm,flag5_bm};
+
+
+
 #define FRAMES_PER_SECOND 10
 
 #define W 80
@@ -190,8 +266,9 @@ const unsigned char PROGMEM ball_bm[] =
 #define cW 8
 #define cH 3
 
-#define R .4
-#define MAX_AX 1.5
+#define R .4  // rocket impulse
+
+#define MAX_AX 1.5  // max accellerations
 #define MAX_AY 1
 
 typedef struct sprite sprite;
@@ -306,7 +383,7 @@ void catcher_init() {
 
   gravity = .005;
   air_resistance = .005;
-  wind = 2;
+  wind = 0;
   ft = millis()+ ms_per_frame;
   level = 0;
   level_up = true;
@@ -320,7 +397,8 @@ void move() {
 
     // environmental factors: gravity wind and air resistance
     sprites[i].ay += gravity;
-    if ((wind - sprites[i].ax) > 0) sprites[i].ax += .02;
+    if (wind > 0) {if ((wind - sprites[i].ax) > 0) sprites[i].ax += wind/50;}
+    else if (wind < 0) {if ((wind - sprites[i].ax) < 0) sprites[i].ax += wind/50;}
     if (sprites[i].ax > 0) sprites[i].ax -= air_resistance;
     if (sprites[i].ax < 0) sprites[i].ax += air_resistance;
 
@@ -374,6 +452,7 @@ void move() {
   }
 }
 
+float flap = 0;
 long dt;
 void catcher() {
   if (level_up) {
@@ -392,6 +471,11 @@ void catcher() {
     if (next_ball_max > 3000) next_ball_max -= 500;
     bt = millis()+random(0,next_ball_max);
     gravity += .001;
+    if (level > 1) {
+      wind = level * .05 + random(0,10)/20.0;
+      if (random(0,2)) wind *= -1;
+    }
+    else wind = 0;
   }
   dt = millis();
   if (dt > ft) {
@@ -400,13 +484,21 @@ void catcher() {
     display.clearDisplay();
     display.setCursor(0,0);
     display.print(score);
-    //display.print(" ");   display.print(frame);
+    //display.print(" ");   display.print(wind);
     //    display.print("ax:");display.print(sprites[0].ax);display.print(" ay:");display.print(sprites[0].ay);
     //    display.print("x:");display.print(sprites[0].x);display.print(" y:");display.print(sprites[0].y);
     for(int i=0;i< sprite_count;i++) {
       display.drawBitmap((int)sprites[i].x, (int)sprites[i].y,  sprites[i].bitmap, sprites[i].w, sprites[i].h, 1);
       if (sprites[i].draw_fun) (*sprites[i].draw_fun)(&sprites[i]);
     }
+    if (wind != 0) {
+      display.drawBitmap(5,40,flags_bm[(int)flap],8,8,1);
+      flap += abs(wind);
+    }
+    else {
+      display.drawBitmap(5,40,flag0_bm,8,8,1);
+    }
+    if (flap > 4) flap =0;
     display.drawLine(0,47,79,47,1);
     display.display();
     move();
@@ -421,7 +513,7 @@ void catcher() {
 
   if (pad_check()) {
     switch(pad_hit) {
-    case PAD_R+PAD_L:
+    case PAD_A+PAD_B:
       catcher_init(); 
       break;
     case PAD_L:
@@ -444,6 +536,152 @@ void catcher_menu() {
   display.setCursor(20,TITLE_Y);
 
   display.print("Catcher!");
+}
+
+//---------------------------------------------------------------
+// DRAWER
+
+#define BLINK_RATE 300
+
+int px,py;
+boolean pd;
+uint8_t p_state;
+
+const unsigned char PROGMEM  pp[] = {
+
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x7,0xFF,0xFF,0x80,0x0,0x0,0x0,0x0,
+0x0,0x0,0x4,0x0,0x0,0x80,0x0,0x0,0x0,0x0,
+0x0,0x0,0x4,0x0,0x0,0x80,0x0,0x0,0x0,0x0,
+0x0,0x0,0x4,0x0,0x0,0x80,0x0,0x0,0x0,0x0,
+0x0,0x0,0x4,0x0,0x0,0x80,0x0,0x0,0x0,0x0,
+0x0,0x0,0x4,0x0,0x0,0x80,0x0,0x0,0x0,0x0,
+0x0,0x0,0x4,0x0,0x0,0x80,0x0,0x0,0x0,0x0,
+0x0,0x0,0x4,0x3,0xFF,0xFF,0x80,0x0,0x0,0x0,
+0x0,0x0,0x4,0x2,0x0,0x80,0x80,0x0,0x0,0x0,
+0x0,0x0,0x4,0x2,0x0,0x80,0x80,0x0,0x0,0x0,
+0x0,0x0,0x4,0x2,0x0,0x80,0x80,0x0,0x0,0x0,
+0x0,0x0,0x4,0x2,0x0,0x80,0x80,0x0,0x0,0x0,
+0x0,0x0,0x4,0x2,0x0,0xFF,0xFF,0xFF,0x0,0x0,
+0x0,0x0,0x4,0x2,0x0,0x80,0x80,0x1,0x0,0x0,
+0x0,0x0,0x4,0x2,0x0,0x80,0x80,0x1,0x0,0x0,
+0xF0,0x0,0x4,0x2,0x0,0x80,0x80,0x1,0x0,0x0,
+0x90,0x0,0x4,0x2,0x0,0x87,0xFF,0xF9,0x0,0x0,
+0xF0,0x0,0x4,0x2,0x0,0x84,0x80,0x9,0x0,0x0,
+0xC0,0x0,0x7,0xFE,0x0,0x84,0x80,0x9,0x0,0x0,
+0xC0,0x0,0x0,0x0,0x0,0x84,0x80,0x9,0x0,0x0,
+0xF0,0x0,0x0,0x0,0x0,0x84,0x80,0x9,0x0,0x0,
+0x90,0x0,0x0,0x0,0x0,0xFF,0x80,0x9,0x0,0x0,
+0xF0,0x0,0x0,0x0,0x0,0x4,0x1F,0xFF,0xFF,0xFF,
+0x0,0x0,0x0,0x0,0x0,0x4,0x10,0x9,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x4,0x10,0x9,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x4,0x10,0x9,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x4,0x1F,0xF9,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x4,0x0,0x1,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x4,0x0,0x1,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x4,0x0,0x1,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x7,0xFF,0xFF,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+};
+void drawer_init() {
+  px = 40;
+  py = 24;
+  pd = false;
+  display.clearDisplay();
+//  display.drawBitmap(0,0,pp,W,H,1);
+  display.display();
+  ft = millis() + BLINK_RATE;
+  p_state = 0;
+}
+
+uint8_t sc[H*W/8];
+
+void drawer() {
+  dt = millis();
+  if (!pd && dt > ft) {
+    ft += BLINK_RATE;    
+    display.drawPixel(px,py, display.getPixel(px,py) ? 0:1 );
+    display.display();
+  }
+  if (pad_check()) {
+    int i=0;
+    if (!pd && pad_hit & PAD_L+PAD_R+PAD_D+PAD_U) {
+      display.drawPixel(px,py,p_state);
+    }
+    switch(pad_hit) {
+    case PAD_A+PAD_B:
+      drawer_init();
+      break;
+    case PAD_L:
+      if (px == 0) px=79;
+      else px--;
+      break;
+    case PAD_R:
+      if (px == 79) px=0;
+      else px++;
+      break;
+    case PAD_D:
+      if (py == 47) py=0;
+      else py++;
+      break;
+    case PAD_U:
+      if (py == 0) py=47;
+      else py--;
+      break;
+    case PAD_A:
+      pd = pd ? false : true;
+      break;
+    case PAD_B:
+      if (!pd) p_state = 0;
+      break;
+    case PAD_L+PAD_R:
+      Serial.print("Screen Dump:");
+      Serial.print("\n\r");
+      for(i = 0;i< H*W/8;i++) sc[i]=0;
+      i = 0;
+      for (int y=0; y<H; y++) {
+        for (int x=0; x<W; x++) {
+          sc[i] |= display.getPixel(x,y) << 7-(x%8);
+          if (x%8 == 7) {
+            Serial.print("0x");Serial.print(sc[i],HEX);Serial.print(",");
+            i++;
+          }
+        }
+        Serial.print("\n\r");
+      }
+      Serial.print("\n\r");
+      break;
+    }
+    if (!pd && pad_hit & PAD_L+PAD_R+PAD_D+PAD_U) {
+      p_state = display.getPixel(px,py);
+    }
+    if (pd) {
+      display.drawPixel(px,py,1);
+      if (pad_hit == PAD_A) p_state = 1;
+    }
+    
+    display.display();
+  }
+}
+
+void drawer_menu() {
+  display.setCursor(20,TITLE_Y);
+  display.print("Drawer");
 }
 
 //---------------------------------------------------------------
