@@ -1,5 +1,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
+#include <Bounce.h>
 
 // pin 7 - Serial clock out (SCLK)
 // pin 6 - Serial data out (DIN)
@@ -9,8 +10,6 @@
 Adafruit_PCD8544 display = Adafruit_PCD8544(13, 11, 5, 7, 6);
 #define W 84
 #define H 48
-
-
 
 typedef struct {
   void (*loop_fun)();
@@ -39,6 +38,7 @@ Game games[game_count] = {
     options,options_init,options_menu      }
   ,
 };
+
 int current_game = 1;
 
 int game_choice;
@@ -70,24 +70,46 @@ const unsigned char PROGMEM  sys_splash[] = {
 0x0,0x0,0x0,0x0,0x0,0x0,0x18,0x0,0x0,0x0,0x0,
 0x0,0x0,0x0,0x0,0x0,0x0,0x18,0x0,0x0,0x0,0x0,
 0x0,0x0,0x0,0x0,0x0,0x0,0x18,0x0,0x0,0x0,0x0,
-
 };
-
 
 
 //---------------------------------------------------------------------
 // UTILS
+#define PAD_U_PIN 4
 #define PAD_U 0x01
+#define PAD_D_PIN 8
 #define PAD_D 0x02
+#define PAD_L_PIN 3
 #define PAD_L 0x04
+#define PAD_R_PIN 2
 #define PAD_R 0x08
 #define PAD_A 0x10
 #define PAD_B 0x20
 #define PAD_M 0x40
 
+#define NUM_BUTTONS 4
+Bounce bouncers[] {Bounce( PAD_U_PIN, 5 ),Bounce( PAD_D_PIN, 5 ),Bounce( PAD_L_PIN, 5 ),Bounce( PAD_R_PIN, 5 )};
+
+uint8_t pin_map[] = {PAD_U_PIN,PAD_D_PIN,PAD_L_PIN,PAD_R_PIN};
+uint8_t pad_map[] = {PAD_U,PAD_D,PAD_L,PAD_R};
+
 int pad_hit;
 
+boolean button_check(uint8_t button,uint8_t idx) {
+  if (bouncers[idx].read()==LOW) {pad_hit |= button;return true;}
+  else pad_hit &= ~button;
+  return false;
+}
+
 bool pad_check() {
+  boolean ret_val = false;
+  for(int i = 0;i<NUM_BUTTONS;i++) {
+    if (bouncers[i].update()){
+      ret_val |= button_check(pad_map[i],i);
+    }
+  }
+  if (ret_val) return true;
+
   if(Serial.available()) {
     char ch = Serial.read();
     if (ch=='a') pad_hit = PAD_L;
@@ -345,10 +367,10 @@ const unsigned char *flags_bm[] = {
 #define cW 8
 #define cH 3
 
-#define R .4  // rocket impulse
+#define R .2  // rocket impulse
 
-#define MAX_AX 1.5  // max accellerations
-#define MAX_AY 1
+#define MAX_AX 2  // max accellerations
+#define MAX_AY 1.5
 
 typedef struct sprite sprite;
 
@@ -586,6 +608,25 @@ void catcher() {
   }
   dt = millis();
   if (dt > ft) {
+    switch(pad_hit) {
+    case PAD_A+PAD_B:
+      catcher_init(); 
+      break;
+    case PAD_L:
+      if (sprites[CATCHER].ax < MAX_AX) sprites[CATCHER].ax+= R;
+      break;
+    case PAD_R:
+      if (sprites[CATCHER].ax > -MAX_AX) sprites[CATCHER].ax-= R;
+      break;
+    case PAD_U:
+      if (sprites[CATCHER].ay < MAX_AY) sprites[CATCHER].ay+= R;
+      break;
+    case PAD_D:
+      if (sprites[CATCHER].ay > -MAX_AY) sprites[CATCHER].ay-= R;
+      break;
+    }
+    
+    
     ft+= ms_per_frame;
     frame = (frame == FRAMES_PER_SECOND-1) ? 0 : frame+1;
     display.clearDisplay();
@@ -619,23 +660,8 @@ void catcher() {
   }
 
   if (pad_check()) {
-    switch(pad_hit) {
-    case PAD_A+PAD_B:
-      catcher_init(); 
-      break;
-    case PAD_L:
-      if (sprites[CATCHER].ax < MAX_AX) sprites[CATCHER].ax+= R;
-      break;
-    case PAD_R:
-      if (sprites[CATCHER].ax > -MAX_AX) sprites[CATCHER].ax-= R;
-      break;
-    case PAD_U:
-      if (sprites[CATCHER].ay < MAX_AY) sprites[CATCHER].ay+= R;
-      break;
-    case PAD_D:
-      if (sprites[CATCHER].ay > -MAX_AY) sprites[CATCHER].ay-= R;
-      break;
-    }
+      if (pad_hit == PAD_A+PAD_B)
+        catcher_init(); 
   }
 }
 
@@ -819,8 +845,18 @@ void drawer_menu() {
   display.print("Drawer");
 }
 
+void setup_buttons() {
+  for(int i =0;i< NUM_BUTTONS;i++) {
+    pinMode(pin_map[i], INPUT);      // Push-Button On Bread Board
+    digitalWrite(pin_map[i], HIGH);  // Turn on internal Pull-Up Resistor
+    bouncers[i].write(HIGH);
+  }
+}
+
 //---------------------------------------------------------------
 void setup() {
+  setup_buttons();
+
   analogWrite(9, opts[BRIGHTNESS]); // blPin is ocnnected to BL LED
   Serial.begin(115200);
   Serial.println("Game on!");
