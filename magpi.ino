@@ -19,25 +19,23 @@ typedef struct {
 } 
 Game;
 
-#define MENU_GAME     0
-#define CATCHER_GAME  1
-#define DRAW_GAME  2
-#define OPTIONS_GAME  3
+#define MENU_GAME    0
+#define CATCHER_GAME 1
+#define DRAW_GAME    2
+#define SNAKE_GAME   3
+#define OPTIONS_GAME 4
 
-const int game_count = 4;
+const int game_count = 5;
 Game games[game_count] = {
-  {
-    menu,menu_init,0      }
+  {menu,menu_init,0}
   ,
-  {
-    catcher,catcher_init,catcher_menu      }
+  {catcher,catcher_init,catcher_menu}
   ,
-  {
-    drawer,drawer_init,drawer_menu      }
+  {drawer,drawer_init,drawer_menu}
   ,
-  {
-    options,options_init,options_menu      }
+  {snake,snake_init,snake_menu}
   ,
+  {options,options_init,options_menu}
 };
 int current_game = 1;
 
@@ -731,7 +729,7 @@ void drawer_init() {
 //  display.drawBitmap(0,0,catcher_splash,W,H,1);
 
 //  display.drawBitmap(1,1,logo_bm,LOGO_X,LOGO_Y,1);
-  display.drawBitmap(0,3,sys_splash,W,18,1);
+//  display.drawBitmap(0,3,sys_splash,W,18,1);
 
   display.display();
  // display.drawBitmap(0,hbsam0,xx,W,7,1);
@@ -818,7 +816,87 @@ void drawer_menu() {
   display.setCursor(20,TITLE_Y);
   display.print("Drawer");
 }
+//---------------------------------------------------------------
+//UBER SNAKE
+const int max_length = 5;
+typedef struct{
+  uint8_t x;
+  uint8_t y;
+} Point;
+Point segs[max_length];
 
+int dir;
+int snake_speed;
+int seg_life;
+
+int cur_seg;
+int d_seg;
+
+
+void snake_init() {
+  snake_speed = 100;
+  seg_life = 3;
+  level = 1;
+  dir = PAD_R;
+  cur_seg = 2;
+  d_seg = 0;
+  
+  segs[0].x = 42;
+  segs[1].x = 43;
+  segs[2].x = 44;
+
+  segs[0].y = 24;
+  segs[1].y = 24;
+  segs[2].y = 24;
+
+
+  display.clearDisplay();
+  display.display();
+  
+  ft = millis()+snake_speed;
+  
+  px = 44;
+  py = 24;
+
+}
+
+
+
+void snake() {
+  
+    
+  if(pad_check()) dir = pad_hit;
+  
+  //future time/speed
+  if(millis() >= ft) {
+    ft = millis()+snake_speed; //can be more efficient (refactor millis)
+    
+
+    if(dir == PAD_U)py--;
+    else if(dir == PAD_R)px++;
+    else if(dir == PAD_D)py++;
+    else if(dir == PAD_L)px--;
+    
+    display.drawPixel(px,py,1);
+    
+    cur_seg++;
+    if(cur_seg > max_length - 1) cur_seg = 0;
+    segs[cur_seg].x = px;
+    segs[cur_seg].y = py;
+    
+    display.drawPixel(segs[d_seg].x,segs[d_seg].y,0);
+    
+    d_seg++;
+    if(d_seg > max_length - 1) d_seg = 0;
+    
+    display.display();
+  }
+}
+
+void snake_menu() {
+  display.setCursor(13,TITLE_Y);
+  display.print("Uber Snake");
+}
 //---------------------------------------------------------------
 void setup() {
   analogWrite(9, opts[BRIGHTNESS]); // blPin is ocnnected to BL LED
@@ -829,7 +907,7 @@ void setup() {
   display.clearDisplay();
   display.drawBitmap(0,3,sys_splash,W,18,1);
   display.display();
-  delay(5000);
+  delay(1000);
 
   set_game(MENU_GAME);
 }
