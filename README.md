@@ -8,3 +8,7 @@ This project depends on these libraries which you have to install your libraries
 
 + https://github.com/adafruit/Adafruit-GFX-Library
 + https://github.com/adafruit/Adafruit-PCD8544-Nokia-5110-LCD-library
+
+### Construction
+
++ The magpi case is CAD files are at: https://tinkercad.com/things/dgZDHwdQxTX-magpi-complete
