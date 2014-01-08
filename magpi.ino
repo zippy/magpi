@@ -922,6 +922,8 @@ void snake_menu() {
   display.print("Uber Snake");
 }
 
+//---------------------------------------------------------------
+
 void setup_buttons() {
   for(int i =0;i< NUM_BUTTONS;i++) {
     pinMode(pin_map[i], INPUT);      // Push-Button On Bread Board
@@ -930,7 +932,6 @@ void setup_buttons() {
   }
 }
 
-//---------------------------------------------------------------
 void setup() {
   setup_buttons();
 
