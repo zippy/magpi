@@ -170,6 +170,7 @@ const unsigned char PROGMEM logo_bm[] = {
   0x0,0x0,0x0,0x8,0x0,0x0,
 };
 
+  
 void name() {
   display.clearDisplay();
   display.drawBitmap(1,1,logo_bm,LOGO_X,LOGO_Y,1);
@@ -190,7 +191,6 @@ void name() {
 
   display.display();
 }
-
 void menu() {
   if (pad_check()) {
     if (pad_hit & (PAD_L+PAD_R)) {
@@ -203,7 +203,8 @@ void menu() {
       }
       name();
     }
-    else {
+    
+    else if(pad_hit == PAD_A) {
       set_game(game_choice);
     }
   }
@@ -260,7 +261,7 @@ void saveConfig() {
 const char * opts_name[NUM_OPTIONS] = {"Contrast","Brightness"};
 const uint8_t opts_max[NUM_OPTIONS] = {75,255};
 const uint8_t opts_min[NUM_OPTIONS] = {20,0};
-#define REPEAT_RATE 250
+#define REPEAT_RATE 500
 
 uint8_t current_option;
 boolean draw = true;
@@ -805,9 +806,11 @@ const unsigned char PROGMEM  drawer_splash[] = {
 
 };
 
+uint8_t kc;
+
 void drawer_init() {
   do_splash(drawer_splash);
-
+  kc = 0;
   px = W/2;
   py = H/2;
   pd = false;
@@ -846,6 +849,21 @@ void screen_dump() {
   Serial.print("\n\r");
 }
 
+void doKC() {
+  analogWrite(BACKLIGHT_PIN, 0);
+  delay(200);
+  analogWrite(BACKLIGHT_PIN, 255);
+  delay(200);
+  analogWrite(BACKLIGHT_PIN, 0);
+  delay(200);  
+  analogWrite(BACKLIGHT_PIN, 255);
+  delay(200);
+  analogWrite(BACKLIGHT_PIN, 0);
+  delay(200);
+  analogWrite(BACKLIGHT_PIN, opts.values[BRIGHTNESS]);
+}
+
+
 void drawer() {
   dt = millis();
   if (!pd && dt > ft) {
@@ -854,6 +872,34 @@ void drawer() {
     display.display();
   }
   if (pad_check()) {
+    
+//    <DO NOT TRY TO FIGURE OUT WHAT THIS CODE DOES!>
+boolean done = 0;
+    if(pad_hit == PAD_U && ((kc == 0) || (kc == 1))) {
+      kc++;
+      done = 1;}
+    if(pad_hit == PAD_D && ((kc == 2) || (kc == 3))) {
+      kc++;
+      done = 1;}
+    if(pad_hit == PAD_L && ((kc == 4) || (kc == 6))) {
+      kc++;
+      done = 1;}
+    if(pad_hit == PAD_R && ((kc == 5) || (kc == 7))) {
+      kc++;
+      done = 1;}
+    if(pad_hit == PAD_B && (kc == 8)) {
+      kc++;
+      done = 1;}
+    if(pad_hit == PAD_A && (kc == 9)) {
+      kc++;
+      done = 1;}
+    if(pad_hit == PAD_M && (kc == 10)) {
+      kc++;
+      done = 1;}
+    if(done != 1) kc = 0;
+    if(kc == 11) doKC();
+//    </DO NOT TRY TO FIGURE OUT WHAT THIS CODE DOES!>
+
     if (!pd && pad_hit & PAD_L+PAD_R+PAD_D+PAD_U) {
       display.drawPixel(px,py,p_state);
     }
