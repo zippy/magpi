@@ -104,7 +104,8 @@ const unsigned char PROGMEM  sys_splash[] = {
 
 #define NUM_BUTTONS 6
 Bounce bouncers[] {
-  Bounce( PAD_U_PIN, 5 ),Bounce( PAD_D_PIN, 5 ),Bounce( PAD_L_PIN, 5 ),Bounce( PAD_R_PIN, 5 ),Bounce( PAD_A_PIN, 5 ),Bounce( PAD_B_PIN, 5 )};
+  Bounce(),  Bounce(),  Bounce(),  Bounce(),  Bounce(),  Bounce()
+};
 
 const uint8_t pin_map[] = {
   PAD_U_PIN,PAD_D_PIN,PAD_L_PIN,PAD_R_PIN,PAD_A_PIN,PAD_B_PIN};
@@ -988,7 +989,8 @@ void setup_buttons() {
   for(int i =0;i< NUM_BUTTONS;i++) {
     pinMode(pin_map[i], INPUT);      // Push-Button On Bread Board
     digitalWrite(pin_map[i], HIGH);  // Turn on internal Pull-Up Resistor
-    bouncers[i].write(HIGH);
+    bouncers[i].interval(5);
+    bouncers[i].attach(pin_map[i]);
   }
 }
 
