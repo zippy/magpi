@@ -37,9 +37,10 @@ Game;
 #define CATCHER_GAME 1
 #define DRAW_GAME    2
 #define SNAKE_GAME   3
-#define OPTIONS_GAME 4
+#define CODEZ_GAME   4
+#define OPTIONS_GAME 5
 
-const int game_count = 5;
+const int game_count = OPTIONS_GAME+1;
 Game games[game_count] = {
   {menu,menu_init,0}
   ,
@@ -48,6 +49,8 @@ Game games[game_count] = {
   {drawer,drawer_init,drawer_menu}
   ,
   {snake,snake_init,snake_menu}
+  ,
+  {codez,codez_init,codez_menu}
   ,
   {options,options_init,options_menu}
 };
@@ -103,7 +106,7 @@ const unsigned char PROGMEM  sys_splash[] = {
 #define PAD_M 0x40
 
 #define NUM_BUTTONS 6
-Bounce bouncers[] {
+Bounce bouncers[] = {
   Bounce(),  Bounce(),  Bounce(),  Bounce(),  Bounce(),  Bounce()
 };
 
@@ -123,7 +126,7 @@ boolean button_check(uint8_t button,uint8_t idx) {
   return false;
 }
 
-bool pad_check() {
+boolean pad_check() {
   boolean ret_val = false;
   for(int i = 0;i<NUM_BUTTONS;i++) {
     if (bouncers[i].update()){
@@ -170,7 +173,10 @@ const unsigned char PROGMEM logo_bm[] = {
   0x0,0x0,0x0,0x8,0x0,0x0,
 };
 
-  
+void menu_check() {
+  if (analogRead(A0)< 1000) set_game(MENU_GAME);
+}
+
 void name() {
   display.clearDisplay();
   display.drawBitmap(1,1,logo_bm,LOGO_X,LOGO_Y,1);
@@ -537,7 +543,7 @@ void do_splash(const unsigned char *s) {
     display.clearDisplay();
     display.drawBitmap(0,0,s,W,H,1);
     display.display();
-    while(!pad_check());
+    while(!pad_check()) {menu_check();};
   }
 }
 
@@ -1031,11 +1037,49 @@ void snake_menu() {
 
 //---------------------------------------------------------------
 
+#define B_GROUND 1
+#define B_THING 2
+
+const uint8_t PROGMEM b_ground_bm[] = {
+  B11110000,
+  B11110000,
+  B11110000,
+  B11110000
+};
+
+void draw_block(uint8_t blockid, uint8_t x, uint8_t y) {
+  const uint8_t *block_bm; //creating pointer
+  if(blockid == B_GROUND) block_bm = b_ground_bm; //sets pointer to a value
+  
+  display.drawBitmap(x, y, block_bm, 4, 4, 1);
+}
+
+void codez_init() {
+  display.clearDisplay();
+}
+
+void codez() {
+  
+  draw_block(B_GROUND, 0, 0);
+  display.display();
+  
+}
+
+//-----
+
+void codez_menu() {
+  display.setCursor(20,TITLE_Y);
+  display.print("Codez");
+}
+
+
+//---------------------------------------------------------------
+
 void setup_buttons() {
   for(int i =0;i< NUM_BUTTONS;i++) {
     pinMode(pin_map[i], INPUT);      // Push-Button On Bread Board
     digitalWrite(pin_map[i], HIGH);  // Turn on internal Pull-Up Resistor
-    bouncers[i].interval(5);
+    bouncers[i].interval(15);
     bouncers[i].attach(pin_map[i]);
   }
 }
@@ -1059,7 +1103,7 @@ void setup() {
 
 void loop() {
   (*games[current_game].loop_fun)();
-  if (analogRead(A0)< 1000) set_game(MENU_GAME);
+  menu_check();
 }
 
 
