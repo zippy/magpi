@@ -59,8 +59,14 @@ int current_game = 1;
 
 int game_choice;
 boolean splash;
+boolean options_changed = false;
 
 void set_game(int game) {
+  if (options_changed) {
+    saveConfig();
+    options_changed = false;
+  }
+
   if (game == MENU_GAME && current_game != MENU_GAME) game_choice = current_game;
   current_game = game;
   splash=true;
@@ -296,7 +302,8 @@ void options() {
     case PAD_D:
       if (pad_hit == PAD_D && opts.values[current_option] > opts_min[current_option]) opts.values[current_option]--;
       if (pad_hit == PAD_U && opts.values[current_option] < opts_max[current_option]) opts.values[current_option]++;
-      saveConfig();
+      options_changed = true;
+
       switch(current_option) {
       case CONTRAST:            
         display.setContrast(opts.values[CONTRAST]);
