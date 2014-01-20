@@ -957,7 +957,8 @@ void drawer_menu() {
 }
 //---------------------------------------------------------------
 //UBER SNAKE
-const int max_length = 5;
+
+const int max_length = 10;
 typedef struct{
   uint8_t x;
   uint8_t y;
@@ -967,12 +968,21 @@ Point segs[max_length];
 int dir;
 int snake_speed;
 int seg_life;
+int growing;
 
 int cur_seg;
 int d_seg;
+uint8_t applex;
+uint8_t appley;
 
+void newapple() {
+  applex = random(1,83);
+  appley = random(1,47);
+  display.drawPixel(applex,appley,1);
+}
 
 void snake_init() {
+  growing = false;
   snake_speed = 100;
   seg_life = 3;
   level = 1;
@@ -988,11 +998,14 @@ void snake_init() {
   segs[1].y = 24;
   segs[2].y = 24;
 
-
   display.clearDisplay();
   display.display();
   
+  newapple();
+  
   ft = millis()+snake_speed;
+  
+  randomSeed(ft);
   
   px = 44;
   py = 24;
@@ -1001,6 +1014,10 @@ void snake_init() {
 
 void snake() {
   
+  if((px == applex) && (py == appley)) { //apple is eaten
+    growing = true;
+    newapple();
+  }
     
   if(pad_check()) dir = pad_hit;
   
@@ -1023,7 +1040,9 @@ void snake() {
     
     display.drawPixel(segs[d_seg].x,segs[d_seg].y,0);
     
-    d_seg++;
+    if(!growing) d_seg++;
+    else growing = false;
+    
     if(d_seg > max_length - 1) d_seg = 0;
     
     display.display();
