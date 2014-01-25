@@ -37,8 +37,7 @@ Game;
 #define CATCHER_GAME 1
 #define DRAW_GAME    2
 #define SNAKE_GAME   3
-#define CODEZ_GAME   4
-#define OPTIONS_GAME 5
+#define OPTIONS_GAME 4
 
 const int game_count = OPTIONS_GAME+1;
 Game games[game_count] = {
@@ -49,8 +48,6 @@ Game games[game_count] = {
   {drawer,drawer_init,drawer_menu}
   ,
   {snake,snake_init,snake_menu}
-  ,
-  {codez,codez_init,codez_menu}
   ,
   {options,options_init,options_menu}
 };
@@ -1059,43 +1056,6 @@ void snake() {
 void snake_menu() {
   display.setCursor(13,TITLE_Y);
   display.print("Uber Snake");
-}
-
-//---------------------------------------------------------------
-//CODES
-#define B_GROUND 1
-#define B_THING 2
-
-const uint8_t PROGMEM b_ground_bm[] = {
-  B11110000,
-  B11110000,
-  B11110000,
-  B11110000
-};
-
-void draw_block(uint8_t blockid, uint8_t x, uint8_t y) {
-  const uint8_t *block_bm; //creating pointer
-  if(blockid == B_GROUND) block_bm = b_ground_bm; //sets pointer to a value
-  
-  display.drawBitmap(x, y, block_bm, 4, 4, 1);
-}
-
-void codez_init() {
-  display.clearDisplay();
-}
-
-void codez() {
-  
-  draw_block(B_GROUND, 0, 0);
-  display.display();
-  
-}
-
-//-----
-
-void codez_menu() {
-  display.setCursor(20,TITLE_Y);
-  display.print("Codez");
 }
 
 
