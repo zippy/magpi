@@ -230,7 +230,7 @@ void menu_init() {
 //---------------------------------------------------------------------
 // OPTIONS
 
-long ft,bt;
+unsigned long ft,bt;
 
 #define NUM_OPTIONS 2
 #define CONTRAST 0
@@ -273,7 +273,7 @@ void saveConfig() {
 const char * opts_name[NUM_OPTIONS] = {"Contrast","Brightness"};
 const uint8_t opts_max[NUM_OPTIONS] = {75,255};
 const uint8_t opts_min[NUM_OPTIONS] = {20,0};
-#define REPEAT_RATE 500
+#define REPEAT_RATE 250
 
 uint8_t current_option;
 boolean draw = true;
@@ -287,9 +287,9 @@ void options() {
     display.print(opts.values[current_option]-opts_min[current_option]);
     display.display();
   }
-  unsigned long ct = millis();
   if (pad_check()) ft = 0;
-  if (pad_hit != -1 && ct > ft) {
+  unsigned long ct = millis();
+  if ((pad_hit != 0) && (ct > ft)) {
     ft = ct + REPEAT_RATE;
     switch(pad_hit) {
     case PAD_R:
@@ -313,7 +313,7 @@ void options() {
         break;
       }
     }
-    if (current_option < 0) current_option = NUM_OPTIONS -1;
+    if (current_option == 0xFF) current_option = NUM_OPTIONS -1;
     else if (current_option >= NUM_OPTIONS) current_option = 0;
     draw = true;
   }
