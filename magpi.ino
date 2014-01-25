@@ -901,7 +901,7 @@ boolean done = 0;
       kc++;
       done = 1;}
     if(pad_hit == PAD_B && (kc == 8)) {
-      kc++;
+      kc++; 
       done = 1;}
     if(pad_hit == PAD_A && (kc == 9)) {
       kc++;
@@ -1062,7 +1062,7 @@ void snake_menu() {
 }
 
 //---------------------------------------------------------------
-
+//CODES
 #define B_GROUND 1
 #define B_THING 2
 
