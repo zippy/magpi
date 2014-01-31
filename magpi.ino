@@ -1,3 +1,5 @@
+//BRANCH: EXPERI-MENTAL
+
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
 #include <Bounce.h>
@@ -36,7 +38,8 @@ Game;
 #define MENU_GAME    0
 #define DRAW_GAME    1
 #define TEST_GAME   2
-#define OPTIONS_GAME 3
+#define ZOOMING_GAME 3
+#define OPTIONS_GAME 4
 
 const int game_count = OPTIONS_GAME+1;
 Game games[game_count] = {
@@ -47,6 +50,8 @@ Game games[game_count] = {
   {test,test_init,test_menu}
   ,
   {options,options_init,options_menu}
+  ,
+  {zooming,zooming_init,zooming_menu}
 };
 
 int current_game = 1;
@@ -555,6 +560,30 @@ void drawer_menu() {
   display.print("Drawer");
 }
 //---------------------------------------------------------------
+//ZOOMING
+
+const uint8_t maxcubes = 3
+
+void drawscreen() {
+  for(i<= maxcubes; i++) {
+    drawRect(cubes[i].x,cubes[i].z,cubewh,1
+    //fill triangle
+    //draw horizon 0, 12 | 84, 12
+  }
+}
+
+void zooming_init() {
+}
+
+void zooming() {
+}
+
+void drawer_menu() {
+  display.setCursor(20,TITLE_Y);
+  display.print("Zooming");
+}
+
+//---------------------------------------------------------------
 //TEST
 
 const float pi = 3.14159265358979323846264338;
@@ -617,14 +646,18 @@ void test_init() {
 void test() {
   display.clearDisplay();
   drawsquare(rotv);
-  rotv+=4;
+  pad_check();
+  if(pad_hit == PAD_R) rotv += 7;
+  else if(pad_hit == PAD_L) rotv -= 7;
+//  else rotv = rotv;
+    
   display.display();
   
 }
 
 void test_menu() {
-  display.setCursor(13,TITLE_Y);
-  display.print("Testing-+*/ ^_^");
+  display.setCursor(11,TITLE_Y);
+  display.print("Testing ^_^");
 }
 
 
