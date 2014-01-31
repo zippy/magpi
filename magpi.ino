@@ -1,3 +1,5 @@
+//BRANCH: MASTER
+
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
 #include <Bounce.h>
@@ -962,7 +964,7 @@ void drawer_menu() {
 //---------------------------------------------------------------
 //UBER SNAKE
 
-const int max_length = 10;
+const int max_length = 20;
 typedef struct{
   uint8_t x;
   uint8_t y;
