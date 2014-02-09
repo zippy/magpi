@@ -23,7 +23,7 @@
 // pin 2 - VCC
 // pin 1 - GND
 
-// #define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 
 //Adafruit_PCD8544(int8_t SCLK, int8_t DIN, int8_t DC, int8_t CS, int8_t RST);
 Adafruit_PCD8544 display = Adafruit_PCD8544(2,3, 4, 5, 6);
@@ -843,21 +843,19 @@ void drawer_init() {
 }
 
 #ifdef SERIAL_DEBUG
-uint8_t sc[H*(W/8+1)];
 void screen_dump() {
-  int i;
+  uint8_t sc;
   Serial.print(F("Screen Dump:"));
   Serial.print(F("\n\r"));
-  for(i = 0;i< H*(W/8+1);i++) sc[i]=0;
-  i = 0;
+  sc = 0;
   for (int y=0; y<H; y++) {
     for (int x=0; x<W; x++) {
-      sc[i] |= display.getPixel(x,y) << 7-(x%8);
+      sc |= display.getPixel(x,y) << 7-(x%8);
       if (x%8 == 7 || x%W == W-1) {
         Serial.print(F("0x"));
-        Serial.print(sc[i],HEX);
+        Serial.print(sc,HEX);
         Serial.print(F(","));
-        i++;
+        sc=0;
       }
     }
     Serial.print(F("\n\r"));
