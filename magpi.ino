@@ -562,23 +562,83 @@ void drawer_menu() {
 //---------------------------------------------------------------
 //ZOOMING
 
-const uint8_t maxcubes = 3
+uint8_t nextcube;
+uint8_t cubespeed;
+int spawnspeed;
+uint8_t cubewh;
+const uint8_t maxcubes = 19;
+struct cube{uint8_t x; uint8_t z;};
+struct cube cubes[maxcubes];
+long ft2;
 
 void drawscreen() {
-  for(i<= maxcubes; i++) {
-    drawRect(cubes[i].x,cubes[i].z,cubewh,1
-    //fill triangle
-    //draw horizon 0, 12 | 84, 12
+  display.clearDisplay();
+  for(uint8_t i = 0; i< maxcubes; i++) {
+    cubewh = cubes[i].z / 4; //size based on z
+    display.drawRect(cubes[i].x - (cubewh / 2),cubes[i].z - cubewh,cubewh,cubewh,1);
+    display.fillTriangle(39,46, 45,46, 42,41, 1); //draws your character (a triangle)
+    display.drawLine(0,12,84,12,1);  //draw horizon 0, 12 | 84, 12
   }
+  display.display();
+}
+
+//random(1,84-3)
+
+uint8_t randomx() {
+  uint8_t last = cubes[(nextcube == 0) ? maxcubes - 1: nextcube - 1].x; //"if" that returns a value
+  uint8_t x = random(1,84-3);
+  while(abs(x - last) < 10) { //closest that cubes can form from the last cube
+    x = random(1,84-3);
+  }
+  return x;
+}
+
+void init_cube() {
+    cubes[nextcube].x = randomx();
+    cubes[nextcube].z = 12; //horizon
+    nextcube++;
+    if(nextcube >= maxcubes) nextcube = 0;
 }
 
 void zooming_init() {
+  nextcube = 0;
+  ft = 0;
+  ft2 = 0;
+  cubespeed = 100;
+  spawnspeed = 1000;
+  cubewh = 2;
+  display.clearDisplay();
+  drawscreen();
+//  for(uint8_t i = 0; i<= maxcubes; i++) {
+//    init_cube(i);
+//  }
 }
 
 void zooming() {
+  long ct = millis();
+  
+  //spawn cubes loop
+  if(ct >= ft2){
+   
+    init_cube();
+    
+    ft2 = ct + spawnspeed;
+      }
+      
+  //advance cubes loop
+  if(ct >= ft){
+    
+    for(uint8_t i = 0; i< maxcubes; i++) {
+      cubes[i].z++;
+    }
+
+    ft = ct + cubespeed;
+  }
+  
+  drawscreen();
 }
 
-void drawer_menu() {
+void zooming_menu() {
   display.setCursor(20,TITLE_Y);
   display.print("Zooming");
 }
