@@ -23,6 +23,8 @@
 // pin 2 - VCC
 // pin 1 - GND
 
+// #define SERIAL_DEBUG
+
 //Adafruit_PCD8544(int8_t SCLK, int8_t DIN, int8_t DC, int8_t CS, int8_t RST);
 Adafruit_PCD8544 display = Adafruit_PCD8544(2,3, 4, 5, 6);
 #define W 84
@@ -139,7 +141,7 @@ boolean pad_check() {
     }
   }
   if (ret_val) return true;
-
+#ifdef SERIAL_DEBUG
   if(Serial.available()) {
     char ch = Serial.read();
     if (ch=='a') pad_hit = PAD_L;
@@ -156,6 +158,7 @@ boolean pad_check() {
     }
     return true;
   }
+#endif
   return false;
 }
 
@@ -192,13 +195,13 @@ void name() {
     (*games[game_choice].menu_fun)();
   }
   display.setCursor(0,40);
-  display.print("Nav:");  
+  display.print(F("Nav:"));  
   display.write(27);  
   display.write(26);
 
   display.setCursor(0,32);
-  display.print("Select:");
-  display.print("A");
+  display.print(F("Select:"));
+  display.print(F("A"));
 
   display.display();
 }
@@ -279,10 +282,10 @@ boolean draw = true;
 void options() {
   if (draw) {
     display.clearDisplay();
-    display.print("--Options--");
+    display.print(F("--Options--"));
     display.setCursor(0,20);
     display.print(opts_name[current_option]);
-    display.print(":");
+    display.print(F(":"));
     display.print(opts.values[current_option]-opts_min[current_option]);
     display.display();
   }
@@ -319,7 +322,7 @@ void options() {
 }
 void options_menu() {
   display.setCursor(20,TITLE_Y);
-  display.print("Options");
+  display.print(F("Options"));
 }
 void options_init() {
   current_option=0;
@@ -654,15 +657,15 @@ void catcher() {
     level_up = false;
     display.clearDisplay();
     display.setCursor(0,0);
-    display.print("-- Catcher! --");
+    display.print(F("-- Catcher! --"));
     if (balls_missed > 0) {
       display.setCursor(20,10);
-      display.print("Missed ");
+      display.print(F("Missed "));
       display.print(balls_missed);
     }
     balls_missed = 0;
     display.setCursor(20,20);
-    display.print("Level ");
+    display.print(F("Level "));
     level_balls = level;
     display.print(level);
     display.display();
@@ -740,7 +743,7 @@ void catcher() {
 void catcher_menu() {
   display.setCursor(20,TITLE_Y);
 
-  display.print("Catcher!");
+  display.print(F("Catcher!"));
 }
 
 //---------------------------------------------------------------
@@ -839,27 +842,29 @@ void drawer_init() {
   p_state = 0;
 }
 
+#ifdef SERIAL_DEBUG
 uint8_t sc[H*(W/8+1)];
 void screen_dump() {
   int i;
-  Serial.print("Screen Dump:");
-  Serial.print("\n\r");
+  Serial.print(F("Screen Dump:"));
+  Serial.print(F("\n\r"));
   for(i = 0;i< H*(W/8+1);i++) sc[i]=0;
   i = 0;
   for (int y=0; y<H; y++) {
     for (int x=0; x<W; x++) {
       sc[i] |= display.getPixel(x,y) << 7-(x%8);
       if (x%8 == 7 || x%W == W-1) {
-        Serial.print("0x");
+        Serial.print(F("0x"));
         Serial.print(sc[i],HEX);
-        Serial.print(",");
+        Serial.print(F(","));
         i++;
       }
     }
-    Serial.print("\n\r");
+    Serial.print(F("\n\r"));
   }
-  Serial.print("\n\r");
+  Serial.print(F("\n\r"));
 }
+#endif
 
 void doKC() {
   analogWrite(BACKLIGHT_PIN, 0);
@@ -941,9 +946,11 @@ boolean done = 0;
     case PAD_B:
       if (!pd) p_state = 0;
       break;
+ #ifdef SERIAL_DEBUG
     case PAD_L+PAD_R:
       screen_dump();
       break;
+#endif
     }
     if (!pd && pad_hit & PAD_L+PAD_R+PAD_D+PAD_U) {
       p_state = display.getPixel(px,py);
@@ -959,7 +966,7 @@ boolean done = 0;
 
 void drawer_menu() {
   display.setCursor(20,TITLE_Y);
-  display.print("Drawer");
+  display.print(F("Drawer"));
 }
 //---------------------------------------------------------------
 //UBER SNAKE
@@ -1057,7 +1064,7 @@ void snake() {
 
 void snake_menu() {
   display.setCursor(13,TITLE_Y);
-  display.print("Uber Snake");
+  display.print(F("Uber Snake"));
 }
 
 
@@ -1077,8 +1084,10 @@ void setup() {
   loadConfig();
   pinMode(A0, INPUT_PULLUP);
   analogWrite(9, opts.values[BRIGHTNESS]); // blPin is ocnnected to BL LED
+#ifdef SERIAL_DEBUG
   Serial.begin(115200);
-  Serial.println("Game on!");
+  Serial.println(F("Game on!"));
+#endif
   display.begin();
   display.setContrast(opts.values[CONTRAST]);
   display.clearDisplay();
