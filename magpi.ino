@@ -437,27 +437,27 @@ void drawer_init() {
   p_state = 0;
 }
 
-uint8_t sc[H*(W/8+1)];
+
 void screen_dump() {
-  int i;
-  Serial.print("Screen Dump:");
-  Serial.print("\n\r");
-  for(i = 0;i< H*(W/8+1);i++) sc[i]=0;
-  i = 0;
+  uint8_t sc;
+  Serial.print(F("Screen Dump:"));
+  Serial.print(F("\n\r"));
+  sc = 0;
   for (int y=0; y<H; y++) {
     for (int x=0; x<W; x++) {
-      sc[i] |= display.getPixel(x,y) << 7-(x%8);
+      sc |= display.getPixel(x,y) << 7-(x%8);
       if (x%8 == 7 || x%W == W-1) {
-        Serial.print("0x");
-        Serial.print(sc[i],HEX);
-        Serial.print(",");
-        i++;
+        Serial.print(F("0x"));
+        Serial.print(sc,HEX);
+        Serial.print(F(","));
+        sc=0;
       }
     }
-    Serial.print("\n\r");
+    Serial.print(F("\n\r"));
   }
-  Serial.print("\n\r");
+  Serial.print(F("\n\r"));
 }
+
 
 void doKC() {
   analogWrite(BACKLIGHT_PIN, 0);
@@ -574,6 +574,9 @@ long ft2;
 void drawscreen() {
   display.clearDisplay();
   for(uint8_t i = 0; i< maxcubes; i++) {
+    pad_check();
+    if(pad_hit == PAD_L) cubes[i].x++;
+    else if(pad_hit == PAD_R) cubes[i].x--;
     cubewh = cubes[i].z / 4; //size based on z
     display.drawRect(cubes[i].x - (cubewh / 2),cubes[i].z - cubewh,cubewh,cubewh,1);
     display.fillTriangle(39,46, 45,46, 42,41, 1); //draws your character (a triangle)
@@ -582,7 +585,6 @@ void drawscreen() {
   display.display();
 }
 
-//random(1,84-3)
 
 uint8_t randomx() {
   uint8_t last = cubes[(nextcube == 0) ? maxcubes - 1: nextcube - 1].x; //"if" that returns a value
@@ -629,7 +631,7 @@ void zooming() {
   if(ct >= ft){
     
     for(uint8_t i = 0; i< maxcubes; i++) {
-      cubes[i].z++;
+      cubes[i].z+=2;
     }
 
     ft = ct + cubespeed;
