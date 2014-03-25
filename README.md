@@ -12,3 +12,4 @@ This project depends on these libraries which you have to install your libraries
 ### Construction
 
 + The magpi case is CAD files are at: https://tinkercad.com/things/dgZDHwdQxTX-magpi-complete
++ Build instructions at: http://www.instructables.com/id/Magpi-The-Micro-Arduino-Gaming-Platform-Interface
