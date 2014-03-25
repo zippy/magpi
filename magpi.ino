@@ -1,3 +1,5 @@
+//BRANCH: MASTER
+
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
 #include <Bounce.h>
@@ -21,6 +23,8 @@
 // pin 2 - VCC
 // pin 1 - GND
 
+//#define SERIAL_DEBUG
+
 //Adafruit_PCD8544(int8_t SCLK, int8_t DIN, int8_t DC, int8_t CS, int8_t RST);
 Adafruit_PCD8544 display = Adafruit_PCD8544(2,3, 4, 5, 6);
 #define W 84
@@ -37,8 +41,7 @@ Game;
 #define CATCHER_GAME 1
 #define DRAW_GAME    2
 #define SNAKE_GAME   3
-#define CODEZ_GAME   4
-#define OPTIONS_GAME 5
+#define OPTIONS_GAME 4
 
 const int game_count = OPTIONS_GAME+1;
 Game games[game_count] = {
@@ -49,8 +52,6 @@ Game games[game_count] = {
   {drawer,drawer_init,drawer_menu}
   ,
   {snake,snake_init,snake_menu}
-  ,
-  {codez,codez_init,codez_menu}
   ,
   {options,options_init,options_menu}
 };
@@ -140,7 +141,7 @@ boolean pad_check() {
     }
   }
   if (ret_val) return true;
-
+#ifdef SERIAL_DEBUG
   if(Serial.available()) {
     char ch = Serial.read();
     if (ch=='a') pad_hit = PAD_L;
@@ -157,6 +158,7 @@ boolean pad_check() {
     }
     return true;
   }
+#endif
   return false;
 }
 
@@ -193,13 +195,13 @@ void name() {
     (*games[game_choice].menu_fun)();
   }
   display.setCursor(0,40);
-  display.print("Nav:");  
+  display.print(F("Nav:"));  
   display.write(27);  
   display.write(26);
 
   display.setCursor(0,32);
-  display.print("Select:");
-  display.print("A");
+  display.print(F("Select:"));
+  display.print(F("A"));
 
   display.display();
 }
@@ -280,10 +282,10 @@ boolean draw = true;
 void options() {
   if (draw) {
     display.clearDisplay();
-    display.print("--Options--");
+    display.print(F("--Options--"));
     display.setCursor(0,20);
     display.print(opts_name[current_option]);
-    display.print(":");
+    display.print(F(":"));
     display.print(opts.values[current_option]-opts_min[current_option]);
     display.display();
   }
@@ -320,7 +322,7 @@ void options() {
 }
 void options_menu() {
   display.setCursor(20,TITLE_Y);
-  display.print("Options");
+  display.print(F("Options"));
 }
 void options_init() {
   current_option=0;
@@ -655,15 +657,15 @@ void catcher() {
     level_up = false;
     display.clearDisplay();
     display.setCursor(0,0);
-    display.print("-- Catcher! --");
+    display.print(F("-- Catcher! --"));
     if (balls_missed > 0) {
       display.setCursor(20,10);
-      display.print("Missed ");
+      display.print(F("Missed "));
       display.print(balls_missed);
     }
     balls_missed = 0;
     display.setCursor(20,20);
-    display.print("Level ");
+    display.print(F("Level "));
     level_balls = level;
     display.print(level);
     display.display();
@@ -741,7 +743,7 @@ void catcher() {
 void catcher_menu() {
   display.setCursor(20,TITLE_Y);
 
-  display.print("Catcher!");
+  display.print(F("Catcher!"));
 }
 
 //---------------------------------------------------------------
@@ -840,27 +842,27 @@ void drawer_init() {
   p_state = 0;
 }
 
-uint8_t sc[H*(W/8+1)];
+#ifdef SERIAL_DEBUG
 void screen_dump() {
-  int i;
-  Serial.print("Screen Dump:");
-  Serial.print("\n\r");
-  for(i = 0;i< H*(W/8+1);i++) sc[i]=0;
-  i = 0;
+  uint8_t sc;
+  Serial.print(F("Screen Dump:"));
+  Serial.print(F("\n\r"));
+  sc = 0;
   for (int y=0; y<H; y++) {
     for (int x=0; x<W; x++) {
-      sc[i] |= display.getPixel(x,y) << 7-(x%8);
+      sc |= display.getPixel(x,y) << 7-(x%8);
       if (x%8 == 7 || x%W == W-1) {
-        Serial.print("0x");
-        Serial.print(sc[i],HEX);
-        Serial.print(",");
-        i++;
+        Serial.print(F("0x"));
+        Serial.print(sc,HEX);
+        Serial.print(F(","));
+        sc=0;
       }
     }
-    Serial.print("\n\r");
+    Serial.print(F("\n\r"));
   }
-  Serial.print("\n\r");
+  Serial.print(F("\n\r"));
 }
+#endif
 
 void doKC() {
   analogWrite(BACKLIGHT_PIN, 0);
@@ -901,7 +903,7 @@ boolean done = 0;
       kc++;
       done = 1;}
     if(pad_hit == PAD_B && (kc == 8)) {
-      kc++;
+      kc++; 
       done = 1;}
     if(pad_hit == PAD_A && (kc == 9)) {
       kc++;
@@ -942,9 +944,11 @@ boolean done = 0;
     case PAD_B:
       if (!pd) p_state = 0;
       break;
+ #ifdef SERIAL_DEBUG
     case PAD_L+PAD_R:
       screen_dump();
       break;
+#endif
     }
     if (!pd && pad_hit & PAD_L+PAD_R+PAD_D+PAD_U) {
       p_state = display.getPixel(px,py);
@@ -960,12 +964,12 @@ boolean done = 0;
 
 void drawer_menu() {
   display.setCursor(20,TITLE_Y);
-  display.print("Drawer");
+  display.print(F("Drawer"));
 }
 //---------------------------------------------------------------
 //UBER SNAKE
 
-const int max_length = 10;
+const int max_length = 20;
 typedef struct{
   uint8_t x;
   uint8_t y;
@@ -1058,44 +1062,7 @@ void snake() {
 
 void snake_menu() {
   display.setCursor(13,TITLE_Y);
-  display.print("Uber Snake");
-}
-
-//---------------------------------------------------------------
-
-#define B_GROUND 1
-#define B_THING 2
-
-const uint8_t PROGMEM b_ground_bm[] = {
-  B11110000,
-  B11110000,
-  B11110000,
-  B11110000
-};
-
-void draw_block(uint8_t blockid, uint8_t x, uint8_t y) {
-  const uint8_t *block_bm; //creating pointer
-  if(blockid == B_GROUND) block_bm = b_ground_bm; //sets pointer to a value
-  
-  display.drawBitmap(x, y, block_bm, 4, 4, 1);
-}
-
-void codez_init() {
-  display.clearDisplay();
-}
-
-void codez() {
-  
-  draw_block(B_GROUND, 0, 0);
-  display.display();
-  
-}
-
-//-----
-
-void codez_menu() {
-  display.setCursor(20,TITLE_Y);
-  display.print("Codez");
+  display.print(F("Uber Snake"));
 }
 
 
@@ -1115,8 +1082,10 @@ void setup() {
   loadConfig();
   pinMode(A0, INPUT_PULLUP);
   analogWrite(9, opts.values[BRIGHTNESS]); // blPin is ocnnected to BL LED
+#ifdef SERIAL_DEBUG
   Serial.begin(115200);
-  Serial.println("Game on!");
+  Serial.println(F("Game on!"));
+#endif
   display.begin();
   display.setContrast(opts.values[CONTRAST]);
   display.clearDisplay();
