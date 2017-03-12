@@ -1,6 +1,6 @@
 #magpi
 
-__M__icro __A__rduino __G__ame __P__latform __I__nterface
+<b>M</b>icro <b>A</b>rduino <b>G</b>ame <b>P</b>latform <b>I</b>nterface
 
 ### Installation
 
