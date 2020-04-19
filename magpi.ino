@@ -44,17 +44,7 @@ Game;
 #define OPTIONS_GAME 4
 
 const int game_count = OPTIONS_GAME+1;
-Game games[game_count] = {
-  {menu,menu_init,0}
-  ,
-  {catcher,catcher_init,catcher_menu}
-  ,
-  {drawer,drawer_init,drawer_menu}
-  ,
-  {snake,snake_init,snake_menu}
-  ,
-  {options,options_init,options_menu}
-};
+Game games[game_count];
 
 int current_game = 1;
 
@@ -1078,6 +1068,12 @@ void setup_buttons() {
 }
 
 void setup() {
+  games[0] =  {menu, menu_init, 0};
+  games[1] =  {catcher,catcher_init,catcher_menu};
+  games[2] =  {drawer,drawer_init,drawer_menu};
+  games[3] =  {snake,snake_init,snake_menu};
+  games[4] =  {options,options_init,options_menu};
+  
   setup_buttons();
   loadConfig();
   pinMode(A0, INPUT_PULLUP);
@@ -1100,7 +1096,3 @@ void loop() {
   (*games[current_game].loop_fun)();
   menu_check();
 }
-
-
-
-
