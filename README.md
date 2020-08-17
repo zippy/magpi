@@ -1,4 +1,4 @@
-#magpi
+# magpi
 
 <b>M</b>icro <b>A</b>rduino <b>G</b>ame <b>P</b>latform <b>I</b>nterface
 
